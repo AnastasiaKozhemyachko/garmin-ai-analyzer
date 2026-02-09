@@ -1,0 +1,12 @@
+{
+  "name": "garmin-ai-analyzer",
+  "version": "1.0.0",
+  "description": "Automated Garmin health data collection with AI-powered analysis",
+  "main": "upload_to_chatgpt.js",
+  "scripts": {
+    "upload": "node upload_to_chatgpt.js"
+  },
+  "keywords": ["garmin", "health", "ai", "chatgpt", "analyzer"],
+  "author": "",
+  "license": "MIT"
+}
