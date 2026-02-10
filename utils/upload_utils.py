@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+"""Shared functions for ChatGPT upload scripts."""
 import sys
 import time
 import subprocess
 from pathlib import Path
-from config import DATA_FILE, CHATGPT_URL, DELAY_MS, FINDER_WAIT_MS, UPLOAD_WAIT_MS, ANALYSIS_PROMPT
 
 
 def sleep_ms(ms):
@@ -14,6 +14,16 @@ def sleep_ms(ms):
 def run_applescript(script):
     """Execute AppleScript command."""
     subprocess.run(["osascript", "-e", script], check=True)
+
+
+def close_finder():
+    """Close all Finder windows."""
+    script = '''
+tell application "Finder"
+  close every window
+end tell
+'''
+    run_applescript(script)
 
 
 def select_and_copy_file(file_path):
@@ -74,9 +84,8 @@ end tell
     run_applescript(script)
 
 
-def main():
-    file_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DATA_FILE
-    
+def upload_to_chatgpt(file_path, prompt, chatgpt_url, delay_ms, finder_wait_ms, upload_wait_ms):
+    """Upload file to ChatGPT with given prompt."""
     if not file_path.exists():
         print(f"❌ File not found: {file_path}")
         sys.exit(1)
@@ -86,31 +95,24 @@ def main():
     
     print("📂 Opening file in Finder...")
     subprocess.run(["open", "-R", str(absolute_path)], check=True)
-    sleep_ms(FINDER_WAIT_MS)
+    sleep_ms(finder_wait_ms)
+    
+    print("🗑️  Closing Finder windows...")
+    close_finder()
+    sleep_ms(500)
     
     print("📋 Selecting and copying file...")
     select_and_copy_file(str(absolute_path))
     
     print("🌐 Opening ChatGPT...")
-    open_chatgpt(CHATGPT_URL)
-    sleep_ms(DELAY_MS)
+    open_chatgpt(chatgpt_url)
+    sleep_ms(delay_ms)
     
     print("📎 Pasting file...")
     paste_file()
-    sleep_ms(UPLOAD_WAIT_MS)
+    sleep_ms(upload_wait_ms)
     
     print("📝 Sending prompt...")
-    send_prompt(ANALYSIS_PROMPT)
+    send_prompt(prompt)
     
     print("✅ Done")
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n⚠️  Interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        sys.exit(1)

@@ -1,7 +1,24 @@
+# Virtual environment
 venv/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+
+# Garmin authentication
 .garth/
+
+# Generated data
 results/
+
+# Node modules
 node_modules/
+
+# macOS
 .DS_Store
+
+# IDE
+.vscode/
+.idea/

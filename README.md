@@ -1,13 +1,13 @@
 # Garmin AI Analyzer
 
-Automated Garmin health data collection with AI-powered analysis.
+Automated Garmin health data collection with AI-powered analysis for morning and evening reports.
 
 ## Features
 
-- Collects 14 days of Garmin health data
-- Automatically uploads to ChatGPT for health analysis
-- Supports both Python and JavaScript upload methods
-- Secure session management with automatic resume
+- Morning report: Sleep quality, recovery, and readiness assessment
+- Evening report: Daily activity, stress, and sleep recommendations
+- Automatic ChatGPT upload with custom prompts
+- Secure session management
 
 ## Setup
 
@@ -17,62 +17,44 @@ source venv/bin/activate
 pip install garth
 ```
 
-## Quick Start
+## Usage
 
-### Run Complete Workflow
-
+### Evening Report
 ```bash
-python3 run_workflow.py
+python3 run_evening.py
 ```
+Collects daily activity data and uploads to ChatGPT for evening analysis.
 
-This will:
-1. Authenticate with Garmin (or resume existing session)
-2. Collect health data for the last 14 days
-3. Save to `results/all_data.json`
-4. Upload to ChatGPT for analysis
-
-### Run Individual Steps
-
-**Collect data only:**
+### Morning Report
 ```bash
-python3 collect_garmin_data.py
+python3 run_morning.py
 ```
-
-**Upload to ChatGPT (Python):**
-```bash
-python3 upload_to_chatgpt.py results/all_data.json
-```
-
-**Upload to ChatGPT (JavaScript):**
-```bash
-npm install
-node upload_to_chatgpt.js results/all_data.json
-```
+Collects recovery metrics and uploads to ChatGPT for morning readiness assessment.
 
 ## Configuration
 
-Edit `config.py` to customize:
+Edit `utils/config.py` to customize:
 
-- `DAYS_TO_COLLECT` - Number of days to collect (default: 14)
+- `PROMPT_MORNING` / `PROMPT_EVENING` - Analysis prompts
+- `DATA_TYPES_MORNING` / `DATA_TYPES_EVENING` - Metrics to collect
 - `CHATGPT_URL` - ChatGPT URL
 - `DELAY_MS`, `FINDER_WAIT_MS`, `UPLOAD_WAIT_MS` - Timing settings
-- `ANALYSIS_PROMPT` - Custom analysis prompt
-- `DATA_TYPES` - Garmin data types to collect
 
-## Data Types Collected
+## Project Structure
 
-- Activity, Body Battery, HRV, Heart Rate
-- Sleep data, Stress levels, Steps
-- Training status and readiness
-- Weight, Hydration
-- And more...
-
-## How ChatGPT Upload Works
-
-1. Opens file in Finder and copies it
-2. Opens ChatGPT in Chrome
-3. Pastes file to upload
-4. Sends health analysis prompt
+```
+├── run_evening.py          # Evening workflow
+├── run_morning.py          # Morning workflow
+├── scripts/
+│   ├── collect_evening.py  # Evening data collection
+│   ├── collect_morning.py  # Morning data collection
+│   ├── upload_evening.py   # Evening upload
+│   └── upload_morning.py   # Morning upload
+└── utils/
+    ├── config.py           # Configuration
+    ├── collection_utils.py # Shared collection functions
+    └── upload_utils.py     # Shared upload functions
+```
 
 ## Requirements
 
