@@ -32,12 +32,12 @@ def select_and_copy_file(file_path):
 tell application "Finder"
   activate
   select file (POSIX file "{file_path}" as alias)
-  delay 1
+  delay 0.5
 end tell
 
 tell application "System Events"
-  keystroke "c" using {{command down}}
-  delay 1
+  key code 8 using {{command down}}
+  delay 0.5
 end tell
 '''
     run_applescript(script)
@@ -50,7 +50,7 @@ tell application "Google Chrome"
   activate
   open location "{url}"
 end tell
-delay 3
+delay 1.5
 '''
     run_applescript(script)
 
@@ -60,12 +60,12 @@ def paste_file():
     script = '''
 tell application "Google Chrome"
   activate
-  delay 1
+  delay 0.5
 end tell
 
 tell application "System Events"
-  keystroke "v" using {command down}
-  delay 2
+  key code 9 using {command down}
+  delay 1
 end tell
 '''
     run_applescript(script)
@@ -76,8 +76,8 @@ def send_prompt(prompt):
     subprocess.run(["pbcopy"], input=prompt.encode(), check=True)
     script = '''
 tell application "System Events"
-  keystroke "v" using {command down}
-  delay 1
+  key code 9 using {command down}
+  delay 0.5
   key code 36
 end tell
 '''
@@ -99,7 +99,7 @@ def upload_to_chatgpt(file_path, prompt, chatgpt_url, delay_ms, finder_wait_ms, 
     
     print("🗑️  Closing Finder windows...")
     close_finder()
-    sleep_ms(500)
+    sleep_ms(200)
     
     print("📋 Selecting and copying file...")
     select_and_copy_file(str(absolute_path))
