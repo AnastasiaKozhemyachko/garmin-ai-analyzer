@@ -31,6 +31,18 @@ python3 run_morning.py
 ```
 Collects recovery metrics and uploads to ChatGPT for morning readiness assessment.
 
+### Run Collection Only
+
+To collect data without uploading to ChatGPT:
+
+```bash
+# Morning data collection only
+python3 scripts/collect_morning.py
+
+# Evening data collection only
+python3 scripts/collect_evening.py
+```
+
 ## Configuration
 
 Edit `utils/config.py` to customize:

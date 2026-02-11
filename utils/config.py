@@ -98,54 +98,23 @@ PROMPT_EVENING = """Ты — AI-ассистент пользователя, к�
 и предложи 2–3 вопроса про сон, восстановление или завтра.
 """
 
-# Data types for morning report (always fetch from API)
 DATA_TYPES_MORNING = [
-    # Core recovery / illness-overload signals
-    ("daily_hrv", "DailyHRV", 30, True),
-    ("daily_heart_rate", "DailyHeartRate", 30, True),
-
-    # Sleep (summary + quality)
-    ("daily_sleep", "DailySleep", 14, True),
-    ("daily_sleep_data", "DailySleepData", 14, True),  # ➕ фазы/пробуждения
-
-    # Stress / fatigue
-    ("daily_stress", "DailyStress", 7, True),
-    ("body_battery_data", "BodyBatteryData", 7, True),
-
-    # Readiness / activity baseline
-    ("training_readiness_data", "TrainingReadinessData", 7, True),
-    ("daily_steps", "DailySteps", 7, True),
-
-    # Yesterday load context
-    ("activity", "Activity", 2, True),
-    ("daily_intensity_minutes", "DailyIntensityMinutes", 2, True),
-    ("daily_training_status", "DailyTrainingStatus", 2, True),
+    ("daily_sleep", "DailySleep", 7, True),
+    ("daily_sleep_data", "DailySleepData", 2, True),
+    ("daily_hrv", "DailyHRV", 14, True),
+    ("daily_heart_rate", "DailyHeartRate", 7, True),
+    ("training_readiness_data", "TrainingReadinessData", 3, True),
+    ("activity", "Activity", 3, True),              # было 2
+    ("body_battery_data", "BodyBatteryData", 2, True),  # было 1
+    ("daily_stress", "DailyStress", 2, True),        # было 1
 ]
 
-# Data types for evening report (always fetch from API)
 DATA_TYPES_EVENING = [
-    # Core — today's load & stress
-    ("daily_stress", "DailyStress", 7, True),
-    ("body_battery_data", "BodyBatteryData", 1, True),   # сегодня достаточно, если ты хочешь "утро/вечер" по точкам дня
-    ("daily_steps", "DailySteps", 3, True),
-
-    # Training & load
+    ("daily_stress", "DailyStress", 2, True),
+    ("body_battery_data", "BodyBatteryData", 2, True),  # было 1
     ("activity", "Activity", 2, True),
-    ("daily_intensity_minutes", "DailyIntensityMinutes", 2, True),
-    ("daily_training_status", "DailyTrainingStatus", 2, True),
-
-    # Sleep quality baseline (needed for better sleep recommendations today)
-    ("daily_sleep_data", "DailySleepData", 2, True),
-
-    # Illness / overload context signal (choose ONE option)
-    ("daily_heart_rate", "DailyHeartRate", 2, True),
-    ("hrv_data", "HRVData", 2, True),
-
-    # Optional detail
-    ("fitness_activity", "FitnessActivity", 2, True),
-
-    # Optional baseline context (can be True if you want it always)
-    ("weekly_intensity_minutes", "WeeklyIntensityMinutes", 1, True),
+    ("daily_sleep", "DailySleep", 2, True),
+    ("daily_heart_rate", "DailyHeartRate", 3, True),
 ]
 
 # Garmin data types: (name, class_name, days, enabled), example

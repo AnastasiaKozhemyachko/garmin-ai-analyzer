@@ -4,6 +4,12 @@ import json
 from datetime import date
 from getpass import getpass
 from garth.exc import GarthException
+from sleep_data_slimmer import slim_daily_sleep_data_list
+from hrv_slimmer import slim_daily_hrv_list
+from heart_rate_slimmer import slim_daily_heart_rate_list
+from training_readiness_slimmer import slim_training_readiness_list
+from activity_slimmer import slim_activity_list
+from body_battery_slimmer import slim_body_battery_list
 
 
 def authenticate(garth_dir):
@@ -41,6 +47,27 @@ def collect_data(data_types, output_file, results_dir, days_to_collect):
         try:
             data_class = getattr(garth, class_name)
             data = data_class.list(limit=10) if class_name == "Activity" else data_class.list(today, days)
+            
+            # Slim down data BEFORE converting to dict
+            if name == "daily_sleep_data":
+                data = slim_daily_sleep_data_list(data)
+            elif name == "daily_hrv":
+                data = slim_daily_hrv_list(data)
+            elif name == "daily_heart_rate":
+                data = slim_daily_heart_rate_list(data)
+            elif name == "training_readiness_data":
+                data = slim_training_readiness_list(data)
+            elif name == "activity":
+                data = slim_activity_list(data)
+            elif name == "body_battery_data":
+                data = slim_body_battery_list(data)
+            else:
+                # Convert to dict for proper JSON serialization
+                if hasattr(data, '__iter__') and not isinstance(data, (str, dict)):
+                    data = [item.dict() if hasattr(item, 'dict') else item for item in data]
+                elif hasattr(data, 'dict'):
+                    data = data.dict()
+            
             all_data[name] = data
             print(f"✅ {name} ({days}d)")
         except Exception as e:
