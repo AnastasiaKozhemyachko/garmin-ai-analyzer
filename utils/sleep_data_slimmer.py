@@ -74,7 +74,7 @@ def aggregate_sleep_movement(movements: List[Dict], sleep_start_gmt_ms: Optional
         'high_minutes': sum(1 for l in levels if l >= p90),
         'longest_high_block_minutes': max(high_blocks) if high_blocks else 0,
         'peak_start_gmt': peak_start_gmt,
-        'peak_start_offset_min': peak_start_offset_min,
+        **({'peak_start_offset_min': peak_start_offset_min} if peak_start_offset_min is not None else {}),
         'peak_offset_clamped': peak_offset_clamped
     }
 

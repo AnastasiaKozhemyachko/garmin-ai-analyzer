@@ -17,25 +17,39 @@ def slim_training_readiness(item):
             return ts.replace(microsecond=0).isoformat()
         return str(ts)
     
-    return {
-        'calendar_date': str(data.get('calendar_date')) if data.get('calendar_date') else None,
-        'timestamp_local': format_timestamp(data.get('timestamp_local')),
-        'level': data.get('level'),
-        'score': data.get('score'),
-        'feedback_short': data.get('feedback_short'),
-        'feedback_long': data.get('feedback_long'),
-        'factors': {
-            'sleep_score': data.get('sleep_score'),
-            'sleep_score_percent': data.get('sleep_score_factor_percent'),
-            'recovery_time_hours': data.get('recovery_time'),
-            'recovery_percent': data.get('recovery_time_factor_percent'),
-            'acute_load': data.get('acute_load'),
-            'hrv_percent': data.get('hrv_factor_percent'),
-            'hrv_weekly_average': data.get('hrv_weekly_average'),
-            'stress_history_percent': data.get('stress_history_factor_percent'),
-            'sleep_history_percent': data.get('sleep_history_factor_percent')
-        }
-    }
+    result = {}
+    if data.get('calendar_date') is not None:
+        result['calendar_date'] = str(data.get('calendar_date'))
+    if data.get('timestamp_local') is not None:
+        result['timestamp_local'] = format_timestamp(data.get('timestamp_local'))
+    if data.get('level') is not None:
+        result['level'] = data.get('level')
+    if data.get('score') is not None:
+        result['score'] = data.get('score')
+    if data.get('feedback_short') is not None:
+        result['feedback_short'] = data.get('feedback_short')
+    if data.get('feedback_long') is not None:
+        result['feedback_long'] = data.get('feedback_long')
+    
+    factors = {}
+    for key, value in [
+        ('sleep_score', data.get('sleep_score')),
+        ('sleep_score_percent', data.get('sleep_score_factor_percent')),
+        ('recovery_time_hours', data.get('recovery_time')),
+        ('recovery_percent', data.get('recovery_time_factor_percent')),
+        ('acute_load', data.get('acute_load')),
+        ('hrv_percent', data.get('hrv_factor_percent')),
+        ('hrv_weekly_average', data.get('hrv_weekly_average')),
+        ('stress_history_percent', data.get('stress_history_factor_percent')),
+        ('sleep_history_percent', data.get('sleep_history_factor_percent'))
+    ]:
+        if value is not None:
+            factors[key] = value
+    
+    if factors:
+        result['factors'] = factors
+    
+    return result
 
 
 def slim_training_readiness_list(items, pick="latest"):

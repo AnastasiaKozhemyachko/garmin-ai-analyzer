@@ -51,27 +51,36 @@ def slim_daily_heart_rate(item):
             return ts.replace(microsecond=0).isoformat()
         return str(ts)
     
-    return {
-        'calendar_date': str(data.get('calendar_date')) if data.get('calendar_date') else None,
-        'start_timestamp_gmt': format_timestamp(data.get('start_timestamp_gmt')),
-        'end_timestamp_gmt': format_timestamp(data.get('end_timestamp_gmt')),
-        'resting_heart_rate': data.get('resting_heart_rate'),
-        'last_seven_days_avg_resting_heart_rate': data.get('last_seven_days_avg_resting_heart_rate'),
-        'min_heart_rate': data.get('min_heart_rate'),
-        'max_heart_rate': data.get('max_heart_rate'),
-        'series_summary': {
-            'samples_count': samples_count,
-            'missing_count': missing_count,
-            'avg_hr': avg_hr,
-            'p95_hr': p95_hr,
-            'min_hr': min_hr,
-            'max_hr': max_hr,
-            'peak': {
-                'ts': peak_ts,
-                'hr': peak_hr
-            }
-        }
-    }
+    result = {}
+    if data.get('calendar_date') is not None:
+        result['calendar_date'] = str(data.get('calendar_date'))
+    if data.get('start_timestamp_gmt') is not None:
+        result['start_timestamp_gmt'] = format_timestamp(data.get('start_timestamp_gmt'))
+    if data.get('end_timestamp_gmt') is not None:
+        result['end_timestamp_gmt'] = format_timestamp(data.get('end_timestamp_gmt'))
+    if data.get('resting_heart_rate') is not None:
+        result['resting_heart_rate'] = data.get('resting_heart_rate')
+    if data.get('last_seven_days_avg_resting_heart_rate') is not None:
+        result['last_seven_days_avg_resting_heart_rate'] = data.get('last_seven_days_avg_resting_heart_rate')
+    if data.get('min_heart_rate') is not None:
+        result['min_heart_rate'] = data.get('min_heart_rate')
+    if data.get('max_heart_rate') is not None:
+        result['max_heart_rate'] = data.get('max_heart_rate')
+    
+    series_summary = {'samples_count': samples_count, 'missing_count': missing_count}
+    if avg_hr is not None:
+        series_summary['avg_hr'] = avg_hr
+    if p95_hr is not None:
+        series_summary['p95_hr'] = p95_hr
+    if min_hr is not None:
+        series_summary['min_hr'] = min_hr
+    if max_hr is not None:
+        series_summary['max_hr'] = max_hr
+    if peak_ts is not None and peak_hr is not None:
+        series_summary['peak'] = {'ts': peak_ts, 'hr': peak_hr}
+    
+    result['series_summary'] = series_summary
+    return result
 
 
 def slim_daily_heart_rate_list(items):

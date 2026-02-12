@@ -36,22 +36,32 @@ def slim_activity(item):
     else:
         type_key = None
     
-    return {
+    result = {
         'activity_id': data.get('activity_id'),
         'type': type_key,
-        'start_time_local': format_timestamp(data.get('start_time_local')),
-        'location_name': data.get('location_name'),
-        'metrics': {
-            'distance_m': data.get('distance'),
-            'duration_s': data.get('duration'),
-            'moving_s': data.get('moving_duration'),
-            'steps': data.get('steps'),
-            'calories_kcal': data.get('calories'),
-            'avg_hr': data.get('average_hr'),
-            'max_hr': data.get('max_hr'),
-            'elevation_gain_m': data.get('elevation_gain')
-        }
+        'name': data.get('activity_name'),
+        'start_time_local': format_timestamp(data.get('start_time_local'))
     }
+    
+    if data.get('location_name') is not None:
+        result['location_name'] = data.get('location_name')
+    
+    metrics = {}
+    for key, value in [
+        ('distance_m', data.get('distance')),
+        ('duration_s', data.get('duration')),
+        ('moving_s', data.get('moving_duration')),
+        ('steps', data.get('steps')),
+        ('calories_kcal', data.get('calories')),
+        ('avg_hr', data.get('average_hr')),
+        ('max_hr', data.get('max_hr')),
+        ('elevation_gain_m', data.get('elevation_gain'))
+    ]:
+        if value is not None:
+            metrics[key] = value
+    
+    result['metrics'] = metrics
+    return result
 
 
 def slim_activity_list(items):

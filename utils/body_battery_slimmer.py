@@ -13,6 +13,8 @@ def percentile(data, p):
 
 def slim_body_battery_item(item):
     """Convert BodyBatteryData to compact analysis-ready dict."""
+    from config import HIGH_STRESS_THRESHOLD
+    
     if hasattr(item, 'model_dump'):
         data = item.model_dump()
     elif hasattr(item, 'dict'):
@@ -87,84 +89,138 @@ def slim_body_battery_item(item):
             bb_lowest_ts = bb_values[bb_lowest_idx][0]
         else:
             bb_min = bb_max = bb_start = bb_end = bb_delta = None
-            bb_peak_ts = bb_peak_val = bb_lowest_ts = bb_lowest_val = None
+            bb_peak_ts = bb_lowest_ts = None
     else:
         bb_min = bb_max = bb_start = bb_end = bb_delta = None
-        bb_peak_ts = bb_peak_val = bb_lowest_ts = bb_lowest_val = None
+        bb_peak_ts = bb_lowest_ts = None
     
-    # Build 30-minute timeline
-    timeline_30m = []
+    # Build timeline (full if stress, 30m buckets otherwise)
+    timeline_stress_30m = []
     if event_start_ms:
-        # Merge stress and bb series by timestamp
         stress_dict = {ts: val for ts, val in stress_values}
         bb_dict = {entry[0]: entry[2] for entry in bb_values if len(entry) > 2}
-        
-        # Get all unique timestamps
         all_ts = sorted(set(stress_dict.keys()) | set(bb_dict.keys()))
         
-        # Group by 30-minute buckets
-        buckets = {}
-        for ts in all_ts:
-            offset_min = (ts - event_start_ms) // 60000
-            bucket = (offset_min // 30) * 30
-            
-            if bucket not in buckets:
-                buckets[bucket] = {}
-            
-            if ts in bb_dict:
-                buckets[bucket]['bb'] = bb_dict[ts]
-            if ts in stress_dict:
-                buckets[bucket]['stress'] = stress_dict[ts]
+        stress_vals_in_event = [val for val in stress_dict.values() if val is not None]
+        max_stress = max(stress_vals_in_event) if stress_vals_in_event else 0
+        has_high_stress = max_stress > HIGH_STRESS_THRESHOLD
         
-        # Convert to sorted list
-        timeline_30m = [[offset, values] for offset, values in sorted(buckets.items())]
+        if has_high_stress:
+            # Include all timestamps when stress exists
+            for ts in all_ts:
+                offset_min = (ts - event_start_ms) // 60000
+                values = {}
+                if ts in bb_dict:
+                    values['bb'] = bb_dict[ts]
+                if ts in stress_dict:
+                    values['stress'] = stress_dict[ts]
+                timeline_stress_30m.append([offset_min, values])
+        else:
+            # Use 30-minute buckets when no high stress
+            buckets = {}
+            for ts in all_ts:
+                offset_min = (ts - event_start_ms) // 60000
+                bucket = (offset_min // 30) * 30
+                if bucket not in buckets:
+                    buckets[bucket] = {}
+                if ts in bb_dict:
+                    buckets[bucket]['bb'] = bb_dict[ts]
+                if ts in stress_dict and stress_dict[ts] is not None:
+                    buckets[bucket]['stress'] = stress_dict[ts]
+            timeline_stress_30m = [[offset, values] for offset, values in sorted(buckets.items())]
     
-    return {
-        'event': {
-            'type': event.get('event_type'),
-            'start_gmt': event_start_str,
-            'timezone_offset_min': timezone_offset_min,
-            'duration_s': duration_s,
-            'impact': event.get('body_battery_impact'),
-            'feedback_type': event.get('feedback_type'),
-            'short_feedback': event.get('short_feedback')
-        },
-        'activity': {
-            'id': data.get('activity_id'),
-            'type': data.get('activity_type'),
-            'name': data.get('activity_name')
-        },
-        'avg_stress': round(data.get('average_stress'), 2) if data.get('average_stress') is not None else None,
-        'stress_series_summary': {
-            'samples_count': stress_samples,
-            'missing_count': stress_missing,
-            'avg': stress_avg,
-            'p95': stress_p95,
-            'min': stress_min,
-            'max': stress_max,
-            'peak': {
-                'ts': stress_peak_ts,
-                'value': stress_peak_val
-            }
-        },
-        'body_battery_series_summary': {
-            'samples_count': bb_samples,
-            'min': bb_min,
-            'max': bb_max,
-            'start_value': bb_start,
-            'end_value': bb_end,
-            'delta': bb_delta,
-            'peak': {
-                'ts': bb_peak_ts,
-                'value': bb_max
-            },
-            'lowest': {
-                'ts': bb_lowest_ts,
-                'value': bb_min
-            }
-        },
-        'timeline_30m': timeline_30m
+    # Build activity dict without nulls
+    activity_dict = {}
+    if data.get('activity_id') is not None:
+        activity_dict['id'] = data.get('activity_id')
+    if data.get('activity_type') is not None:
+        activity_dict['type'] = data.get('activity_type')
+    if data.get('activity_name') is not None:
+        activity_dict['name'] = data.get('activity_name')
+    
+    # Build stress peak dict
+    stress_peak = {}
+    if stress_peak_ts is not None:
+        stress_peak['ts'] = stress_peak_ts
+    if stress_peak_val is not None:
+        stress_peak['value'] = stress_peak_val
+    
+    # Build body battery peak/lowest dicts
+    bb_peak = {}
+    if bb_peak_ts is not None:
+        bb_peak['ts'] = bb_peak_ts
+    if bb_max is not None:
+        bb_peak['value'] = bb_max
+    
+    bb_lowest = {}
+    if bb_lowest_ts is not None:
+        bb_lowest['ts'] = bb_lowest_ts
+    if bb_min is not None:
+        bb_lowest['value'] = bb_min
+    
+    # Build stress series summary without nulls
+    stress_summary = {'samples_count': stress_samples, 'missing_count': stress_missing}
+    if stress_avg is not None:
+        stress_summary['avg'] = stress_avg
+    if stress_p95 is not None:
+        stress_summary['p95'] = stress_p95
+    if stress_min is not None:
+        stress_summary['min'] = stress_min
+    if stress_max is not None:
+        stress_summary['max'] = stress_max
+    if stress_peak:
+        stress_summary['peak'] = stress_peak
+    
+    # Build body battery series summary without nulls
+    bb_summary = {'samples_count': bb_samples}
+    if bb_min is not None:
+        bb_summary['min'] = bb_min
+    if bb_max is not None:
+        bb_summary['max'] = bb_max
+    if bb_start is not None:
+        bb_summary['start_value'] = bb_start
+    if bb_end is not None:
+        bb_summary['end_value'] = bb_end
+    if bb_delta is not None:
+        bb_summary['delta'] = bb_delta
+    if bb_peak:
+        bb_summary['peak'] = bb_peak
+    if bb_lowest:
+        bb_summary['lowest'] = bb_lowest
+    
+    # Build event dict without nulls
+    event_dict = {}
+    if event.get('event_type') is not None:
+        event_dict['type'] = event.get('event_type')
+    if event_start_str is not None:
+        event_dict['start_gmt'] = event_start_str
+    if timezone_offset_min is not None:
+        event_dict['timezone_offset_min'] = timezone_offset_min
+    if duration_s is not None:
+        event_dict['duration_s'] = duration_s
+    if event.get('body_battery_impact') is not None:
+        event_dict['impact'] = event.get('body_battery_impact')
+    if event.get('feedback_type') is not None:
+        event_dict['feedback_type'] = event.get('feedback_type')
+    if event.get('short_feedback') is not None:
+        event_dict['short_feedback'] = event.get('short_feedback')
+    
+    result = {
+        'event': event_dict,
+        'stress_series_summary': stress_summary,
+        'body_battery_series_summary': bb_summary,
+        'timeline_stress_30m': timeline_stress_30m
     }
+    
+    # Add optional fields
+    if activity_dict:
+        result['activity'] = activity_dict
+    
+    avg_stress_val = data.get('average_stress')
+    if avg_stress_val is not None:
+        result['avg_stress'] = round(avg_stress_val, 2)
+    
+    return result
 
 
 def slim_body_battery_list(items):
