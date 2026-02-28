@@ -19,17 +19,23 @@ pip install garth
 
 ## Usage
 
+### Morning Report
+```bash
+python3 run_morning.py
+```
+Collects recovery metrics and uploads to ChatGPT for morning readiness assessment.
+
 ### Evening Report
 ```bash
 python3 run_evening.py
 ```
 Collects daily activity data and uploads to ChatGPT for evening analysis.
 
-### Morning Report
+### Activity Analysis
 ```bash
-python3 run_morning.py
+python3 run_activity.py
 ```
-Collects recovery metrics and uploads to ChatGPT for morning readiness assessment.
+Collects latest activity with detailed metrics and uploads to ChatGPT for comprehensive analysis.
 
 ### Run Collection Only
 
@@ -41,13 +47,16 @@ python3 scripts/collect_morning.py
 
 # Evening data collection only
 python3 scripts/collect_evening.py
+
+# Latest activity with detailed metrics
+python3 scripts/collect_latest_activity.py
 ```
 
 ## Configuration
 
 Edit `utils/config.py` to customize:
 
-- `PROMPT_MORNING` / `PROMPT_EVENING` - Analysis prompts
+- `PROMPT_MORNING` / `PROMPT_EVENING` / `PROMPT_ACTIVITY` - Analysis prompts
 - `DATA_TYPES_MORNING` / `DATA_TYPES_EVENING` - Metrics to collect
 - `CHATGPT_URL` - ChatGPT URL
 - `DELAY_MS`, `FINDER_WAIT_MS`, `UPLOAD_WAIT_MS` - Timing settings
@@ -55,13 +64,16 @@ Edit `utils/config.py` to customize:
 ## Project Structure
 
 ```
-├── run_evening.py          # Evening workflow
 ├── run_morning.py          # Morning workflow
+├── run_evening.py          # Evening workflow
+├── run_activity.py         # Activity analysis workflow
 ├── scripts/
-│   ├── collect_evening.py  # Evening data collection
 │   ├── collect_morning.py  # Morning data collection
+│   ├── collect_evening.py  # Evening data collection
+│   ├── collect_latest_activity.py  # Latest activity collection
+│   ├── upload_morning.py   # Morning upload
 │   ├── upload_evening.py   # Evening upload
-│   └── upload_morning.py   # Morning upload
+│   └── upload_activity.py  # Activity upload
 └── utils/
     ├── config.py           # Configuration
     ├── collection_utils.py # Shared collection functions

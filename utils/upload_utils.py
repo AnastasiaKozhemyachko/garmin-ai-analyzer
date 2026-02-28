@@ -32,12 +32,12 @@ def select_and_copy_file(file_path):
 tell application "Finder"
   activate
   select file (POSIX file "{file_path}" as alias)
-  delay 0.5
+  delay 0.3
 end tell
 
 tell application "System Events"
   key code 8 using {{command down}}
-  delay 0.5
+  delay 0.3
 end tell
 '''
     run_applescript(script)
@@ -60,12 +60,12 @@ def paste_file():
     script = '''
 tell application "Google Chrome"
   activate
-  delay 0.5
+  delay 0.3
 end tell
 
 tell application "System Events"
   key code 9 using {command down}
-  delay 1
+  delay 0.5
 end tell
 '''
     run_applescript(script)
@@ -77,7 +77,7 @@ def send_prompt(prompt):
     script = '''
 tell application "System Events"
   key code 9 using {command down}
-  delay 0.5
+  delay 0.3
   key code 36
 end tell
 '''

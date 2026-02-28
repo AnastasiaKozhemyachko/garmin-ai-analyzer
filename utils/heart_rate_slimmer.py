@@ -13,6 +13,10 @@ def percentile(data, p):
 
 def slim_daily_heart_rate(item):
     """Convert DailyHeartRate to compact analysis-ready dict with series aggregation."""
+    # Handle None/empty items
+    if item is None:
+        return None
+        
     if hasattr(item, 'model_dump'):
         data = item.model_dump()
     elif hasattr(item, 'dict'):
@@ -22,8 +26,15 @@ def slim_daily_heart_rate(item):
     else:
         data = vars(item)
     
+    # Check if all required fields are None (no data available)
+    required_fields = ['start_timestamp_gmt', 'end_timestamp_gmt', 'max_heart_rate', 'min_heart_rate', 'resting_heart_rate']
+    if all(data.get(field) is None for field in required_fields):
+        return None
+    
     # Extract heart rate series
     heart_rate_values = data.get('heart_rate_values', [])
+    if heart_rate_values is None:
+        heart_rate_values = []
     
     # Aggregate series
     samples_count = len(heart_rate_values)
@@ -85,4 +96,14 @@ def slim_daily_heart_rate(item):
 
 def slim_daily_heart_rate_list(items):
     """Convert list of DailyHeartRate to compact analysis-ready dicts."""
-    return [slim_daily_heart_rate(item) for item in items]
+    if not items:
+        return []
+    
+    # Filter out None results
+    results = []
+    for item in items:
+        slimmed = slim_daily_heart_rate(item)
+        if slimmed is not None:
+            results.append(slimmed)
+    
+    return results

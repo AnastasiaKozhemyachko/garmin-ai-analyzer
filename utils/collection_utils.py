@@ -43,7 +43,7 @@ def collect_data(data_types, output_file, results_dir, days_to_collect):
         
         try:
             data_class = getattr(garth, class_name)
-            data = data_class.list(limit=10) if class_name == "Activity" else data_class.list(today, days)
+            data = data_class.list(limit=3) if class_name == "Activity" else data_class.list(today, days)
             
             # Slim down data BEFORE converting to dict
             if name == "daily_sleep_data":
@@ -66,6 +66,11 @@ def collect_data(data_types, output_file, results_dir, days_to_collect):
                     data = [item.dict() if hasattr(item, 'dict') else item for item in data]
                 elif hasattr(data, 'dict'):
                     data = data.dict()
+            
+            # Check if data is empty
+            if not data or (isinstance(data, list) and len(data) == 0):
+                print(f"⚠️  {name}: No data available")
+                continue
             
             all_data[name] = data
             print(f"✅ {name} ({days}d)")

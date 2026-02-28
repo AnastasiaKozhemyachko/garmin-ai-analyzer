@@ -17,7 +17,7 @@ def percentile(data: List[float], p: float) -> float:
 
 def aggregate_sleep_movement(movements: List[Dict], sleep_start_gmt_ms: Optional[int]) -> Optional[Dict]:
     """Aggregate sleep_movement array into compact summary."""
-    if not movements:
+    if not movements or movements is None:
         return None
     
     levels = [m['activity_level'] for m in movements]
@@ -81,7 +81,7 @@ def aggregate_sleep_movement(movements: List[Dict], sleep_start_gmt_ms: Optional
 
 def aggregate_sleep_levels(levels: List[Dict], sleep_start_gmt: Optional[int]) -> Optional[Dict]:
     """Aggregate sleep_levels into compressed timeline with 10-minute resolution."""
-    if not levels or not sleep_start_gmt:
+    if not levels or levels is None or not sleep_start_gmt:
         return None
     
     level_map = {0: 'deep', 1: 'light', 2: 'rem', 3: 'awake'}

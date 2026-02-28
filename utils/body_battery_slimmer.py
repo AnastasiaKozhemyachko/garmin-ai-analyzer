@@ -51,6 +51,8 @@ def slim_body_battery_item(item):
     
     # Extract stress series
     stress_values = data.get('stress_values_array', [])
+    if stress_values is None:
+        stress_values = []
     stress_samples = len(stress_values)
     valid_stress = [(ts, val) for ts, val in stress_values if val is not None]
     stress_missing = stress_samples - len(valid_stress)
@@ -68,6 +70,8 @@ def slim_body_battery_item(item):
     
     # Extract body battery series
     bb_values = data.get('body_battery_values_array', [])
+    if bb_values is None:
+        bb_values = []
     bb_samples = len(bb_values)
     
     if bb_values:
