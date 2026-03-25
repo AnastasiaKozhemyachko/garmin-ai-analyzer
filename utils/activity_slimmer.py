@@ -55,12 +55,34 @@ def slim_activity(item):
         ('calories_kcal', data.get('calories')),
         ('avg_hr', data.get('average_hr')),
         ('max_hr', data.get('max_hr')),
-        ('elevation_gain_m', data.get('elevation_gain'))
+        ('elevation_gain_m', data.get('elevation_gain')),
+        ('elevation_loss_m', data.get('elevation_loss')),
     ]:
         if value is not None:
             metrics[key] = value
-    
+
+    # Compute avg pace (min/km) if distance and duration available
+    distance = data.get('distance')
+    duration = data.get('moving_duration') or data.get('duration')
+    if distance and duration and distance > 0:
+        pace_min_per_km = (duration / 60) / (distance / 1000)
+        metrics['avg_pace_min_per_km'] = round(pace_min_per_km, 2)
+
+    # Stride length
+    avg_stride = data.get('avg_stride_length') or data.get('average_stride_length')
+    if avg_stride is not None:
+        metrics['avg_stride_length_m'] = round(avg_stride, 2)
+
     result['metrics'] = metrics
+
+    # Cadence (real garth field names)
+    cadence = data.get('average_running_cadence_in_steps_per_minute')
+    max_cadence = data.get('max_running_cadence_in_steps_per_minute')
+    if cadence is not None:
+        result['cadence_avg'] = round(cadence, 1)
+    if max_cadence is not None:
+        result['cadence_max'] = round(max_cadence, 1)
+
     return result
 
 

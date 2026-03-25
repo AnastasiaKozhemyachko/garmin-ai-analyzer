@@ -84,6 +84,12 @@ def slim_detailed_activity(item):
         distance_speed['avg_moving_speed_m_s'] = summary['averageMovingSpeed']
     if summary.get('maxSpeed'):
         distance_speed['max_speed_m_s'] = summary['maxSpeed']
+    # Compute avg pace (min/km)
+    dist = summary.get('distance')
+    moving_dur = summary.get('movingDuration') or summary.get('duration')
+    if dist and moving_dur and dist > 0:
+        pace = (moving_dur / 60) / (dist / 1000)
+        distance_speed['avg_pace_min_per_km'] = round(pace, 2)
     if distance_speed:
         result['distance_speed'] = distance_speed
     
@@ -121,6 +127,8 @@ def slim_detailed_activity(item):
         cadence['avg_steps_per_min'] = summary['averageRunCadence']
     if summary.get('maxRunCadence'):
         cadence['max_steps_per_min'] = summary['maxRunCadence']
+    if summary.get('averageStrideLength'):
+        cadence['avg_stride_length_m'] = round(summary['averageStrideLength'] / 100, 2) if summary['averageStrideLength'] > 10 else summary['averageStrideLength']
     if cadence:
         result['cadence'] = cadence
     
@@ -191,7 +199,76 @@ def slim_detailed_activity(item):
             break
     if vo2_fields:
         result['vo2'] = vo2_fields
-    
+
+    # Respiration
+    respiration = {}
+    if summary.get('averageRespirationRate'):
+        respiration['avg'] = summary['averageRespirationRate']
+    if summary.get('maxRespirationRate'):
+        respiration['max'] = summary['maxRespirationRate']
+    if summary.get('minRespirationRate'):
+        respiration['min'] = summary['minRespirationRate']
+    if respiration:
+        result['respiration'] = respiration
+
+    # Temperature
+    temperature = {}
+    if summary.get('minTemperature') is not None:
+        temperature['min_c'] = summary['minTemperature']
+    if summary.get('maxTemperature') is not None:
+        temperature['max_c'] = summary['maxTemperature']
+    if temperature:
+        result['temperature'] = temperature
+
+    # Heart Rate Zones (from detailed API response)
+    hr_zones = detailed.get('heartRateZones')
+    if hr_zones and isinstance(hr_zones, list):
+        zones_summary = []
+        for zone in hr_zones:
+            if isinstance(zone, dict):
+                zone_entry = {}
+                if zone.get('zoneNumber') is not None:
+                    zone_entry['zone'] = zone['zoneNumber']
+                if zone.get('secsInZone') is not None:
+                    zone_entry['seconds'] = zone['secsInZone']
+                if zone.get('zoneLowBoundary') is not None:
+                    zone_entry['low_bpm'] = zone['zoneLowBoundary']
+                if zone_entry:
+                    zones_summary.append(zone_entry)
+        if zones_summary:
+            result['hr_zones'] = zones_summary
+
+    # Splits/Laps
+    try:
+        splits_data = garth.connectapi(f'/activity-service/activity/{activity_id}/splits')
+        if splits_data and isinstance(splits_data, dict):
+            laps = splits_data.get('lapDTOs') or splits_data.get('splitDTOs') or []
+            if laps:
+                laps_summary = []
+                for i, lap in enumerate(laps):
+                    if not isinstance(lap, dict):
+                        continue
+                    lap_entry = {'lap': i + 1}
+                    if lap.get('distance'):
+                        lap_entry['distance_m'] = round(lap['distance'], 1)
+                    if lap.get('duration'):
+                        lap_entry['duration_s'] = round(lap['duration'], 1)
+                    if lap.get('averageHR'):
+                        lap_entry['avg_hr'] = lap['averageHR']
+                    if lap.get('maxHR'):
+                        lap_entry['max_hr'] = lap['maxHR']
+                    if lap.get('averageSpeed'):
+                        lap_entry['avg_speed_m_s'] = round(lap['averageSpeed'], 3)
+                    if lap.get('averageRunCadence'):
+                        lap_entry['avg_cadence'] = lap['averageRunCadence']
+                    if lap.get('elevationGain'):
+                        lap_entry['elevation_gain_m'] = lap['elevationGain']
+                    laps_summary.append(lap_entry)
+                if laps_summary:
+                    result['splits'] = laps_summary
+    except Exception:
+        pass  # Splits data not available
+
     return result
 
 

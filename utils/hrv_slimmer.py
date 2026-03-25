@@ -1,5 +1,5 @@
 def slim_daily_hrv(item):
-    """Convert DailyHRV to compact analysis-ready dict."""
+    """Convert DailyHRV to compact analysis-ready dict with trend analysis."""
     if hasattr(item, 'model_dump'):
         data = item.model_dump()
     elif hasattr(item, 'dict'):
@@ -26,6 +26,12 @@ def slim_daily_hrv(item):
         result['status'] = data.get('status')
     if data.get('feedback_phrase') is not None:
         result['feedback_phrase'] = data.get('feedback_phrase')
+    if data.get('start_timestamp_gmt') is not None:
+        result['start_timestamp_gmt'] = str(data.get('start_timestamp_gmt'))
+    if data.get('end_timestamp_gmt') is not None:
+        result['end_timestamp_gmt'] = str(data.get('end_timestamp_gmt'))
+    if data.get('start_timestamp_local') is not None:
+        result['start_timestamp_local'] = str(data.get('start_timestamp_local'))
     
     baseline_dict = {}
     if baseline.get('low_upper') is not None:
@@ -34,8 +40,32 @@ def slim_daily_hrv(item):
         baseline_dict['balanced_low'] = baseline.get('balanced_low')
     if baseline.get('balanced_upper') is not None:
         baseline_dict['balanced_upper'] = baseline.get('balanced_upper')
+    if baseline.get('marker_value') is not None:
+        baseline_dict['marker_value'] = baseline.get('marker_value')
     if baseline_dict:
         result['baseline'] = baseline_dict
+    
+    # Compute trend: compare last_night_avg to baseline range
+    last_night = data.get('last_night_avg')
+    balanced_low = baseline.get('balanced_low')
+    balanced_upper = baseline.get('balanced_upper')
+    low_upper = baseline.get('low_upper')
+    
+    if last_night is not None and balanced_low is not None and balanced_upper is not None:
+        if last_night > balanced_upper:
+            result['trend'] = 'above_baseline'
+        elif last_night >= balanced_low:
+            result['trend'] = 'balanced'
+        elif low_upper is not None and last_night >= low_upper:
+            result['trend'] = 'below_balanced'
+        else:
+            result['trend'] = 'low'
+    
+    # Deviation from weekly average
+    weekly_avg = data.get('weekly_avg')
+    if last_night is not None and weekly_avg is not None and weekly_avg > 0:
+        deviation = round((last_night - weekly_avg) / weekly_avg * 100, 1)
+        result['deviation_from_weekly_pct'] = deviation
     
     return result
 

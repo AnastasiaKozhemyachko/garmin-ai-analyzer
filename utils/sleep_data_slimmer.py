@@ -195,6 +195,28 @@ def slim_daily_sleep_data(item: Any) -> Dict:
                 'value': getattr(overall, 'value', None),
                 'qualifier': getattr(overall, 'qualifier_key', None)
             }
+
+    # Compute sleep efficiency (sleep time / total time in bed * 100)
+    sleep_time = result.get('sleep_time_seconds', 0)
+    awake_time = result.get('awake_sleep_seconds', 0)
+    if sleep_time and sleep_time > 0:
+        total_in_bed = sleep_time + awake_time
+        if total_in_bed > 0:
+            result['sleep_efficiency_pct'] = round(sleep_time / total_in_bed * 100, 1)
+
+    # Compute stage percentages
+    deep = result.get('deep_sleep_seconds', 0) or 0
+    light = result.get('light_sleep_seconds', 0) or 0
+    rem = result.get('rem_sleep_seconds', 0) or 0
+    awake = result.get('awake_sleep_seconds', 0) or 0
+    total_stages = deep + light + rem + awake
+    if total_stages > 0:
+        result['stage_pct'] = {
+            'deep': round(deep / total_stages * 100, 1),
+            'light': round(light / total_stages * 100, 1),
+            'rem': round(rem / total_stages * 100, 1),
+            'awake': round(awake / total_stages * 100, 1),
+        }
     
     # Sleep need
     if isinstance(dto, dict):

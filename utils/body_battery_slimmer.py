@@ -216,6 +216,20 @@ def slim_body_battery_item(item):
         'timeline_stress_30m': timeline_stress_30m
     }
     
+    # Charge/drain rate per hour
+    if bb_delta is not None and duration_s is not None and duration_s > 0:
+        hours = duration_s / 3600
+        if hours > 0:
+            rate = round(bb_delta / hours, 1)
+            if bb_delta > 0:
+                result['charge_rate_per_hour'] = rate
+            else:
+                result['drain_rate_per_hour'] = rate
+
+    # Net charge during event (max - min)
+    if bb_max is not None and bb_min is not None:
+        result['net_range'] = bb_max - bb_min
+
     # Add optional fields
     if activity_dict:
         result['activity'] = activity_dict

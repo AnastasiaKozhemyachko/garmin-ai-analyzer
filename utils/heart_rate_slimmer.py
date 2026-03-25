@@ -90,7 +90,55 @@ def slim_daily_heart_rate(item):
     if peak_ts is not None and peak_hr is not None:
         series_summary['peak'] = {'ts': peak_ts, 'hr': peak_hr}
     
+    # HR zone distribution (estimated from series)
+    # Zones: 1 (50-60% max), 2 (60-70%), 3 (70-80%), 4 (80-90%), 5 (90-100%)
+    max_hr_val = data.get('max_heart_rate')
+    if valid_hrs and max_hr_val and max_hr_val > 0:
+        zone_thresholds = [
+            max_hr_val * 0.5,  # zone 1 start
+            max_hr_val * 0.6,  # zone 2 start
+            max_hr_val * 0.7,  # zone 3 start
+            max_hr_val * 0.8,  # zone 4 start
+            max_hr_val * 0.9,  # zone 5 start
+        ]
+        zones = {'below_z1': 0, 'z1': 0, 'z2': 0, 'z3': 0, 'z4': 0, 'z5': 0}
+        for _, hr in valid_hrs:
+            if hr < zone_thresholds[0]:
+                zones['below_z1'] += 1
+            elif hr < zone_thresholds[1]:
+                zones['z1'] += 1
+            elif hr < zone_thresholds[2]:
+                zones['z2'] += 1
+            elif hr < zone_thresholds[3]:
+                zones['z3'] += 1
+            elif hr < zone_thresholds[4]:
+                zones['z4'] += 1
+            else:
+                zones['z5'] += 1
+        total_samples = len(valid_hrs)
+        if total_samples > 0:
+            series_summary['zone_pct'] = {
+                k: round(v / total_samples * 100, 1) for k, v in zones.items() if v > 0
+            }
+    
     result['series_summary'] = series_summary
+
+    # Resting HR trend (delta from 7-day average)
+    resting_hr = data.get('resting_heart_rate')
+    seven_day_avg = data.get('last_seven_days_avg_resting_heart_rate')
+    if resting_hr is not None and seven_day_avg is not None:
+        result['resting_hr_delta'] = resting_hr - seven_day_avg
+        if seven_day_avg > 0:
+            result['resting_hr_delta_pct'] = round(
+                (resting_hr - seven_day_avg) / seven_day_avg * 100, 1
+            )
+
+    # Time below resting HR (indicates good rest periods)
+    if valid_hrs and resting_hr is not None:
+        below_resting = sum(1 for _, hr in valid_hrs if hr < resting_hr)
+        if below_resting > 0:
+            result['time_below_resting_pct'] = round(below_resting / len(valid_hrs) * 100, 1)
+
     return result
 
 

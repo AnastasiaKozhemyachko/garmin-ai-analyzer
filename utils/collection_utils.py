@@ -11,6 +11,25 @@ from training_readiness_slimmer import slim_training_readiness_list
 from activity_slimmer import slim_activity_list
 from body_battery_slimmer import slim_body_battery_list
 from daily_stress_slimmer import slim_daily_stress_list
+from daily_steps_slimmer import slim_daily_steps_list
+from daily_summary_slimmer import slim_daily_summary_list
+from training_status_slimmer import slim_training_status_list
+from garmin_scores_slimmer import slim_garmin_scores_list
+
+# Registry: data_type_name → slimmer function
+SLIMMER_REGISTRY = {
+    'daily_sleep_data': slim_daily_sleep_data_list,
+    'daily_hrv': slim_daily_hrv_list,
+    'daily_heart_rate': slim_daily_heart_rate_list,
+    'training_readiness_data': slim_training_readiness_list,
+    'activity': slim_activity_list,
+    'body_battery_data': slim_body_battery_list,
+    'daily_stress': slim_daily_stress_list,
+    'daily_steps': slim_daily_steps_list,
+    'daily_summary': slim_daily_summary_list,
+    'daily_training_status': slim_training_status_list,
+    'garmin_scores_data': slim_garmin_scores_list,
+}
 
 
 def authenticate(garth_dir):
@@ -32,7 +51,7 @@ def authenticate(garth_dir):
 
 
 def collect_data(data_types, output_file, results_dir, days_to_collect):
-    """Collect Garmin data."""
+    """Collect Garmin data with robust error handling."""
     results_dir.mkdir(exist_ok=True)
     today = date.today().isoformat()
     all_data = {}
@@ -41,43 +60,119 @@ def collect_data(data_types, output_file, results_dir, days_to_collect):
         name, class_name = item[0], item[1]
         days = item[2] if len(item) > 2 else days_to_collect
         
-        try:
-            data_class = getattr(garth, class_name)
-            data = data_class.list(limit=3) if class_name == "Activity" else data_class.list(today, days)
-            
-            # Slim down data BEFORE converting to dict
-            if name == "daily_sleep_data":
-                data = slim_daily_sleep_data_list(data)
-            elif name == "daily_hrv":
-                data = slim_daily_hrv_list(data)
-            elif name == "daily_heart_rate":
-                data = slim_daily_heart_rate_list(data)
-            elif name == "training_readiness_data":
-                data = slim_training_readiness_list(data)
-            elif name == "activity":
-                data = slim_activity_list(data)
-            elif name == "body_battery_data":
-                data = slim_body_battery_list(data)
-            elif name == "daily_stress":
-                data = slim_daily_stress_list(data)
-            else:
-                # Convert to dict for proper JSON serialization
-                if hasattr(data, '__iter__') and not isinstance(data, (str, dict)):
-                    data = [item.dict() if hasattr(item, 'dict') else item for item in data]
-                elif hasattr(data, 'dict'):
-                    data = data.dict()
-            
-            # Check if data is empty
-            if not data or (isinstance(data, list) and len(data) == 0):
-                print(f"⚠️  {name}: No data available")
-                continue
-            
+        data = _fetch_and_slim(name, class_name, days, today)
+        
+        if data:
             all_data[name] = data
             print(f"✅ {name} ({days}d)")
-        except Exception as e:
-            print(f"⚠️  {name}: {e}")
+        else:
+            print(f"⚠️  {name}: No data available")
     
     with open(output_file, "w") as f:
         json.dump(all_data, f, indent=2, default=str)
     
     print(f"\n✅ Data saved to {output_file}")
+
+
+def _fetch_and_slim(name, class_name, days, today):
+    """Fetch data from Garmin and run through slimmer. Returns slimmed data or None."""
+    from datetime import timedelta
+    
+    # Try primary fetch
+    try:
+        data_class = getattr(garth, class_name)
+        if class_name == "Activity":
+            raw = data_class.list(limit=days)
+        else:
+            raw = data_class.list(today, days)
+        return _slim_data(name, raw)
+    except Exception as e:
+        error_str = str(e)
+    
+    # Pydantic validation errors → try day-by-day collection
+    if "validation error" in error_str.lower():
+        collected = _fetch_day_by_day(name, class_name, days, today)
+        if collected:
+            return collected
+    
+    # Special fallback for garmin_scores_data via connectapi
+    if name == "garmin_scores_data":
+        try:
+            raw_list = []
+            for d_offset in range(days):
+                d = (date.today() - timedelta(days=d_offset)).isoformat()
+                try:
+                    raw = garth.connectapi(f'/wellness-service/wellness/scores/daily/{d}/{d}')
+                    if raw and isinstance(raw, list):
+                        raw_list.extend(raw)
+                    elif raw and isinstance(raw, dict):
+                        raw_list.append(raw)
+                except Exception:
+                    pass
+            if raw_list:
+                slimmer = SLIMMER_REGISTRY.get(name)
+                return slimmer(raw_list) if slimmer else raw_list
+        except Exception:
+            pass
+    
+    # Log the original error
+    short_err = error_str.split('\n')[0][:100]
+    print(f"⚠️  {name}: {short_err}")
+    return None
+
+
+def _fetch_day_by_day(name, class_name, days, today):
+    """Fetch data one day at a time, skipping days with validation errors."""
+    from datetime import timedelta
+    
+    data_class = getattr(garth, class_name, None)
+    if not data_class:
+        return None
+    
+    collected_raw = []
+    for d_offset in range(days):
+        d = (date.today() - timedelta(days=d_offset)).isoformat()
+        try:
+            day_data = data_class.list(d, 1)
+            if day_data:
+                collected_raw.extend(day_data)
+        except Exception:
+            pass  # Skip days with validation errors
+    
+    if collected_raw:
+        return _slim_data(name, collected_raw)
+    return None
+
+
+def _slim_data(name, raw):
+    """Run raw data through the appropriate slimmer."""
+    if not raw or (isinstance(raw, list) and len(raw) == 0):
+        return None
+    
+    slimmer = SLIMMER_REGISTRY.get(name)
+    if slimmer:
+        data = slimmer(raw)
+    else:
+        # Generic conversion
+        if hasattr(raw, '__iter__') and not isinstance(raw, (str, dict)):
+            data = []
+            for entry in raw:
+                if hasattr(entry, 'model_dump'):
+                    data.append(entry.model_dump())
+                elif hasattr(entry, 'dict'):
+                    data.append(entry.dict())
+                elif hasattr(entry, '__dict__'):
+                    data.append(vars(entry))
+                else:
+                    data.append(entry)
+        elif hasattr(raw, 'model_dump'):
+            data = raw.model_dump()
+        elif hasattr(raw, 'dict'):
+            data = raw.dict()
+        else:
+            data = raw
+    
+    if not data or (isinstance(data, list) and len(data) == 0):
+        return None
+    
+    return data
