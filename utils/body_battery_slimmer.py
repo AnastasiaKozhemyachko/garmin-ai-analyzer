@@ -1,51 +1,36 @@
-def percentile(data, p):
-    """Calculate percentile without numpy using linear interpolation."""
-    if not data:
-        return None
-    sorted_data = sorted(data)
-    k = (len(sorted_data) - 1) * p
-    f = int(k)
-    c = f + 1
-    if c >= len(sorted_data):
-        return sorted_data[-1]
-    return sorted_data[f] + (k - f) * (sorted_data[c] - sorted_data[f])
+from format_utils import to_dict, gmt_iso_to_local_iso, ms_to_local_iso, percentile
 
 
 def slim_body_battery_item(item):
     """Convert BodyBatteryData to compact analysis-ready dict."""
     from config import HIGH_STRESS_THRESHOLD
     
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
-    
+    data = to_dict(item)
+
     # Extract event data
     event = data.get('event', {})
     if not isinstance(event, dict):
         event = event.dict() if hasattr(event, 'dict') else vars(event) if hasattr(event, '__dict__') else {}
     
-    # Format event start time
+    # Format event start time — convert GMT to local
     event_start_gmt = event.get('event_start_time_gmt')
+    timezone_offset_ms = event.get('timezone_offset', 0)
+    timezone_offset_min = timezone_offset_ms // 60000 if timezone_offset_ms else None
+
     if event_start_gmt:
-        if hasattr(event_start_gmt, 'replace'):
-            event_start_str = event_start_gmt.replace(microsecond=0).isoformat()
+        if hasattr(event_start_gmt, 'strftime'):
+            event_start_str = gmt_iso_to_local_iso(
+                event_start_gmt.replace(microsecond=0).isoformat(), timezone_offset_min
+            )
             event_start_ms = int(event_start_gmt.timestamp() * 1000)
         else:
-            event_start_str = str(event_start_gmt)
+            event_start_str = gmt_iso_to_local_iso(str(event_start_gmt), timezone_offset_min)
             event_start_ms = None
     else:
         event_start_str = None
         event_start_ms = None
     
-    # Convert timezone offset and duration
-    timezone_offset_ms = event.get('timezone_offset', 0)
-    timezone_offset_min = timezone_offset_ms // 60000 if timezone_offset_ms else None
-    
+    # Convert duration
     duration_ms = event.get('duration_in_milliseconds', 0)
     duration_s = int(duration_ms / 1000) if duration_ms else None
     
@@ -142,23 +127,23 @@ def slim_body_battery_item(item):
     if data.get('activity_name') is not None:
         activity_dict['name'] = data.get('activity_name')
     
-    # Build stress peak dict
+    # Build stress peak dict — convert ts to local
     stress_peak = {}
     if stress_peak_ts is not None:
-        stress_peak['ts'] = stress_peak_ts
+        stress_peak['time'] = ms_to_local_iso(stress_peak_ts, timezone_offset_ms)
     if stress_peak_val is not None:
         stress_peak['value'] = stress_peak_val
     
-    # Build body battery peak/lowest dicts
+    # Build body battery peak/lowest dicts — convert ts to local
     bb_peak = {}
     if bb_peak_ts is not None:
-        bb_peak['ts'] = bb_peak_ts
+        bb_peak['time'] = ms_to_local_iso(bb_peak_ts, timezone_offset_ms)
     if bb_max is not None:
         bb_peak['value'] = bb_max
     
     bb_lowest = {}
     if bb_lowest_ts is not None:
-        bb_lowest['ts'] = bb_lowest_ts
+        bb_lowest['time'] = ms_to_local_iso(bb_lowest_ts, timezone_offset_ms)
     if bb_min is not None:
         bb_lowest['value'] = bb_min
     
@@ -192,14 +177,12 @@ def slim_body_battery_item(item):
     if bb_lowest:
         bb_summary['lowest'] = bb_lowest
     
-    # Build event dict without nulls
+    # Build event dict — local time, no GMT, no tz offset
     event_dict = {}
     if event.get('event_type') is not None:
         event_dict['type'] = event.get('event_type')
     if event_start_str is not None:
-        event_dict['start_gmt'] = event_start_str
-    if timezone_offset_min is not None:
-        event_dict['timezone_offset_min'] = timezone_offset_min
+        event_dict['start_local'] = event_start_str
     if duration_s is not None:
         event_dict['duration_s'] = duration_s
     if event.get('body_battery_impact') is not None:

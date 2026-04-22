@@ -1,26 +1,16 @@
 """Slimmer for DailySteps data — extract key step metrics for analysis."""
+from format_utils import to_dict
 
 
 def slim_daily_steps(item):
     """Convert DailySteps to compact analysis-ready dict."""
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
+    data = to_dict(item)
 
     result = {}
 
     # Core fields
     for key in [
         'calendar_date', 'total_steps', 'step_goal', 'total_distance',
-        'total_calories', 'active_calories', 'floors_ascended',
-        'floors_descended', 'average_stress_level',
-        'moderate_intensity_minutes', 'vigorous_intensity_minutes',
-        'steps_goal',
     ]:
         val = data.get(key)
         if val is not None:
@@ -49,4 +39,3 @@ def slim_daily_steps_list(items):
         if slimmed.get('total_steps') is not None or slimmed.get('calendar_date') is not None:
             results.append(slimmed)
     return results
-

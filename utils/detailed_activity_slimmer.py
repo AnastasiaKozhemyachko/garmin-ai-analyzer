@@ -60,7 +60,6 @@ def slim_detailed_activity(item):
         'type_name': activity_type.get('typeName'),
         'location_name': detailed.get('locationName'),
         'start_time_local': format_timestamp(summary.get('startTimeLocal')),
-        'start_time_gmt': format_timestamp(summary.get('startTimeGMT')),
     }
     
     # Duration metrics
@@ -173,19 +172,6 @@ def slim_detailed_activity(item):
     # Water estimation
     if summary.get('waterEstimated'):
         result['water_estimated_ml'] = summary['waterEstimated']
-    
-    # Coordinates
-    coordinates = {}
-    if summary.get('startLatitude'):
-        coordinates['start_lat'] = summary['startLatitude']
-    if summary.get('startLongitude'):
-        coordinates['start_lon'] = summary['startLongitude']
-    if summary.get('endLatitude'):
-        coordinates['end_lat'] = summary['endLatitude']
-    if summary.get('endLongitude'):
-        coordinates['end_lon'] = summary['endLongitude']
-    if coordinates:
-        result['coordinates'] = coordinates
     
     # Lap info
     if summary.get('minActivityLapDuration'):

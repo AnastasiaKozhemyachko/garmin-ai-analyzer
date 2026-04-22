@@ -1,31 +1,11 @@
 def slim_activity(item):
     """
     Convert Activity to compact analysis-ready dict.
-    
-    For morning reports, we keep only fields that help understand:
-    - What activity was done (type, name, location)
-    - When it happened (start_time_local)
-    - Physical load metrics (distance, duration, steps, calories, HR, elevation)
-    
-    This provides context for recovery/readiness without overwhelming detail.
     """
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
-    
-    # Format timestamp
-    def format_timestamp(ts):
-        if ts is None:
-            return None
-        if hasattr(ts, 'replace'):
-            return ts.replace(microsecond=0).isoformat()
-        return str(ts)
-    
+    from format_utils import to_dict, format_timestamp
+
+    data = to_dict(item)
+
     # Extract activity type
     activity_type = data.get('activity_type')
     if activity_type:
@@ -48,9 +28,9 @@ def slim_activity(item):
     
     metrics = {}
     for key, value in [
-        ('distance_m', data.get('distance')),
-        ('duration_s', data.get('duration')),
-        ('moving_s', data.get('moving_duration')),
+        ('distance_m', round(data.get('distance'), 1) if data.get('distance') is not None else None),
+        ('duration_s', round(data.get('duration')) if data.get('duration') is not None else None),
+        ('moving_s', round(data.get('moving_duration')) if data.get('moving_duration') is not None else None),
         ('steps', data.get('steps')),
         ('calories_kcal', data.get('calories')),
         ('avg_hr', data.get('average_hr')),

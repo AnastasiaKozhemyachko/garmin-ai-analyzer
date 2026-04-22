@@ -1,16 +1,10 @@
 """Slimmer for DailyTrainingStatus data — training load balance and status."""
+from format_utils import to_dict
 
 
 def slim_training_status(item):
     """Convert DailyTrainingStatus to compact analysis-ready dict."""
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
+    data = to_dict(item)
 
     result = {}
 

@@ -15,6 +15,7 @@ from daily_steps_slimmer import slim_daily_steps_list
 from daily_summary_slimmer import slim_daily_summary_list
 from training_status_slimmer import slim_training_status_list
 from garmin_scores_slimmer import slim_garmin_scores_list
+from weight_data_slimmer import slim_weight_data_list
 
 # Registry: data_type_name → slimmer function
 SLIMMER_REGISTRY = {
@@ -29,6 +30,7 @@ SLIMMER_REGISTRY = {
     'daily_summary': slim_daily_summary_list,
     'daily_training_status': slim_training_status_list,
     'garmin_scores_data': slim_garmin_scores_list,
+    'weight_data': slim_weight_data_list,
 }
 
 

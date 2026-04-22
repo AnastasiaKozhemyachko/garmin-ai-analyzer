@@ -1,18 +1,7 @@
 import statistics
 from typing import Any, Dict, List, Optional
+from format_utils import to_dict, ms_to_local_iso, percentile
 
-
-def percentile(data: List[float], p: float) -> float:
-    """Calculate percentile without numpy."""
-    if not data:
-        return 0.0
-    sorted_data = sorted(data)
-    k = (len(sorted_data) - 1) * p
-    f = int(k)
-    c = f + 1
-    if c >= len(sorted_data):
-        return sorted_data[-1]
-    return sorted_data[f] + (k - f) * (sorted_data[c] - sorted_data[f])
 
 
 def aggregate_sleep_movement(movements: List[Dict], sleep_start_gmt_ms: Optional[int]) -> Optional[Dict]:
@@ -73,9 +62,7 @@ def aggregate_sleep_movement(movements: List[Dict], sleep_start_gmt_ms: Optional
         'max': round(max_level, 2),
         'high_minutes': sum(1 for l in levels if l >= p90),
         'longest_high_block_minutes': max(high_blocks) if high_blocks else 0,
-        'peak_start_gmt': peak_start_gmt,
         **({'peak_start_offset_min': peak_start_offset_min} if peak_start_offset_min is not None else {}),
-        'peak_offset_clamped': peak_offset_clamped
     }
 
 
@@ -136,15 +123,8 @@ def slim_daily_sleep_data(item: Any) -> Dict:
         Compact dict with core fields and aggregated summaries
     """
     # Handle Pydantic model or dict
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif hasattr(item, '__dict__'):
-        data = vars(item)
-    else:
-        data = item if isinstance(item, dict) else {}
-    
+    data = to_dict(item)
+
     # Access attributes directly if not a dict
     if not isinstance(data, dict):
         dto = getattr(item, 'daily_sleep_dto', None)
@@ -176,6 +156,17 @@ def slim_daily_sleep_data(item: Any) -> Dict:
         elif hasattr(dto, field):
             result[field] = getattr(dto, field)
     
+    # Grab GMT ms epoch for internal calculations (movement/levels offsets)
+    sleep_start_gmt_ms = result.get('sleep_start_timestamp_gmt')
+
+    # Convert local ms epochs to readable ISO strings, remove GMT timestamps
+    for ts_field in ['sleep_start_timestamp_local', 'sleep_end_timestamp_local']:
+        if ts_field in result and isinstance(result[ts_field], (int, float)):
+            result[ts_field] = ms_to_local_iso(result[ts_field])
+    # Remove raw GMT timestamps — local times are sufficient
+    result.pop('sleep_start_timestamp_gmt', None)
+    result.pop('sleep_end_timestamp_gmt', None)
+
     # Sleep score
     if isinstance(dto, dict):
         sleep_scores = dto.get('sleep_scores', {})
@@ -200,6 +191,8 @@ def slim_daily_sleep_data(item: Any) -> Dict:
     sleep_time = result.get('sleep_time_seconds', 0)
     awake_time = result.get('awake_sleep_seconds', 0)
     if sleep_time and sleep_time > 0:
+        # Human-readable duration
+        result['sleep_duration_hours'] = round(sleep_time / 3600, 1)
         total_in_bed = sleep_time + awake_time
         if total_in_bed > 0:
             result['sleep_efficiency_pct'] = round(sleep_time / total_in_bed * 100, 1)
@@ -232,20 +225,13 @@ def slim_daily_sleep_data(item: Any) -> Dict:
         else:
             result['sleep_need'] = {k: getattr(sleep_need, k, None) for k in need_fields if hasattr(sleep_need, k)}
     
-    # Get sleep_start_timestamp_gmt for time calculations
-    if isinstance(dto, dict):
-        sleep_start_gmt = dto.get('sleep_start_timestamp_gmt')
-    else:
-        sleep_start_gmt = getattr(dto, 'sleep_start_timestamp_gmt', None)
-    
-    # Movement summary - use GMT timestamp from result
+    # Movement summary
     if movements:
-        sleep_start_gmt_ms = result.get('sleep_start_timestamp_gmt')
         result['movement_summary'] = aggregate_sleep_movement(movements, sleep_start_gmt_ms)
     
     # Levels timeline
     if levels:
-        levels_data = aggregate_sleep_levels(levels, sleep_start_gmt)
+        levels_data = aggregate_sleep_levels(levels, sleep_start_gmt_ms)
         if levels_data:
             result['levels_timeline'] = levels_data
     
@@ -265,19 +251,3 @@ def slim_daily_sleep_data_list(items: List[Any]) -> List[Dict]:
     return [slim_daily_sleep_data(item) for item in items]
 
 
-# Example usage
-if __name__ == '__main__':
-    import json
-    
-    # Example: Process list of DailySleepData items
-    # from garth import DailySleepData
-    # from datetime import date
-    # 
-    # today = date.today().isoformat()
-    # daily_sleep_data_list = DailySleepData.list(today, 7)
-    # slimmed = slim_daily_sleep_data_list(daily_sleep_data_list)
-    # 
-    # with open('slimmed_sleep_data.json', 'w') as f:
-    #     json.dump(slimmed, f, indent=2, default=str)
-    
-    print("Sleep data slimmer ready. Use slim_daily_sleep_data(item) or slim_daily_sleep_data_list(items).")

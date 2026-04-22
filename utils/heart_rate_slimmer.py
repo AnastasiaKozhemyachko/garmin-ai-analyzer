@@ -1,31 +1,13 @@
-def percentile(data, p):
-    """Calculate percentile without numpy using linear interpolation."""
-    if not data:
-        return None
-    sorted_data = sorted(data)
-    k = (len(sorted_data) - 1) * p
-    f = int(k)
-    c = f + 1
-    if c >= len(sorted_data):
-        return sorted_data[-1]
-    return sorted_data[f] + (k - f) * (sorted_data[c] - sorted_data[f])
+from format_utils import to_dict, format_timestamp, ms_to_local_iso, percentile
 
 
 def slim_daily_heart_rate(item):
     """Convert DailyHeartRate to compact analysis-ready dict with series aggregation."""
-    # Handle None/empty items
     if item is None:
         return None
         
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
-    
+    data = to_dict(item)
+
     # Check if all required fields are None (no data available)
     required_fields = ['start_timestamp_gmt', 'end_timestamp_gmt', 'max_heart_rate', 'min_heart_rate', 'resting_heart_rate']
     if all(data.get(field) is None for field in required_fields):
@@ -54,21 +36,10 @@ def slim_daily_heart_rate(item):
         avg_hr = p95_hr = min_hr = max_hr = None
         peak_ts = peak_hr = None
     
-    # Format timestamps
-    def format_timestamp(ts):
-        if ts is None:
-            return None
-        if hasattr(ts, 'replace'):
-            return ts.replace(microsecond=0).isoformat()
-        return str(ts)
-    
     result = {}
     if data.get('calendar_date') is not None:
         result['calendar_date'] = str(data.get('calendar_date'))
-    if data.get('start_timestamp_gmt') is not None:
-        result['start_timestamp_gmt'] = format_timestamp(data.get('start_timestamp_gmt'))
-    if data.get('end_timestamp_gmt') is not None:
-        result['end_timestamp_gmt'] = format_timestamp(data.get('end_timestamp_gmt'))
+
     if data.get('resting_heart_rate') is not None:
         result['resting_heart_rate'] = data.get('resting_heart_rate')
     if data.get('last_seven_days_avg_resting_heart_rate') is not None:
@@ -88,8 +59,8 @@ def slim_daily_heart_rate(item):
     if max_hr is not None:
         series_summary['max_hr'] = max_hr
     if peak_ts is not None and peak_hr is not None:
-        series_summary['peak'] = {'ts': peak_ts, 'hr': peak_hr}
-    
+        series_summary['peak'] = {'time': ms_to_local_iso(peak_ts), 'hr': peak_hr}
+
     # HR zone distribution (estimated from series)
     # Zones: 1 (50-60% max), 2 (60-70%), 3 (70-80%), 4 (80-90%), 5 (90-100%)
     max_hr_val = data.get('max_heart_rate')

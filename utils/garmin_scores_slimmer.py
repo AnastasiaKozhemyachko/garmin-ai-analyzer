@@ -1,16 +1,10 @@
 """Slimmer for GarminScoresData — overall daily scores from Garmin."""
+from format_utils import to_dict
 
 
 def slim_garmin_scores(item):
     """Convert GarminScoresData to compact analysis-ready dict."""
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
+    data = to_dict(item)
 
     result = {}
 

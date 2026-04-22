@@ -1,14 +1,10 @@
+from format_utils import to_dict
+
+
 def slim_daily_hrv(item):
     """Convert DailyHRV to compact analysis-ready dict with trend analysis."""
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
-    
+    data = to_dict(item)
+
     baseline = data.get('baseline', {})
     if not isinstance(baseline, dict):
         baseline = baseline.dict() if hasattr(baseline, 'dict') else vars(baseline) if hasattr(baseline, '__dict__') else {}
@@ -26,13 +22,7 @@ def slim_daily_hrv(item):
         result['status'] = data.get('status')
     if data.get('feedback_phrase') is not None:
         result['feedback_phrase'] = data.get('feedback_phrase')
-    if data.get('start_timestamp_gmt') is not None:
-        result['start_timestamp_gmt'] = str(data.get('start_timestamp_gmt'))
-    if data.get('end_timestamp_gmt') is not None:
-        result['end_timestamp_gmt'] = str(data.get('end_timestamp_gmt'))
-    if data.get('start_timestamp_local') is not None:
-        result['start_timestamp_local'] = str(data.get('start_timestamp_local'))
-    
+
     baseline_dict = {}
     if baseline.get('low_upper') is not None:
         baseline_dict['low_upper'] = baseline.get('low_upper')
@@ -40,8 +30,6 @@ def slim_daily_hrv(item):
         baseline_dict['balanced_low'] = baseline.get('balanced_low')
     if baseline.get('balanced_upper') is not None:
         baseline_dict['balanced_upper'] = baseline.get('balanced_upper')
-    if baseline.get('marker_value') is not None:
-        baseline_dict['marker_value'] = baseline.get('marker_value')
     if baseline_dict:
         result['baseline'] = baseline_dict
     

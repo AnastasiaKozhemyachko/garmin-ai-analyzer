@@ -1,22 +1,9 @@
 def slim_training_readiness(item):
     """Convert TrainingReadinessData to compact analysis-ready dict."""
-    if hasattr(item, 'model_dump'):
-        data = item.model_dump()
-    elif hasattr(item, 'dict'):
-        data = item.dict()
-    elif isinstance(item, dict):
-        data = item
-    else:
-        data = vars(item)
-    
-    # Format timestamps
-    def format_timestamp(ts):
-        if ts is None:
-            return None
-        if hasattr(ts, 'replace'):
-            return ts.replace(microsecond=0).isoformat()
-        return str(ts)
-    
+    from format_utils import to_dict, format_timestamp
+
+    data = to_dict(item)
+
     result = {}
     if data.get('calendar_date') is not None:
         result['calendar_date'] = str(data.get('calendar_date'))
