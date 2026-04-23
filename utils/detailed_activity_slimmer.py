@@ -57,7 +57,6 @@ def slim_detailed_activity(item):
         'activity_id': activity_id,
         'activity_name': detailed.get('activityName'),
         'type_key': activity_type.get('typeKey'),
-        'type_name': activity_type.get('typeName'),
         'location_name': detailed.get('locationName'),
         'start_time_local': format_timestamp(summary.get('startTimeLocal')),
     }

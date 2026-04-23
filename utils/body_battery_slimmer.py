@@ -225,5 +225,20 @@ def slim_body_battery_item(item):
 
 
 def slim_body_battery_list(items):
-    """Convert list of BodyBatteryData to compact analysis-ready dicts."""
-    return [slim_body_battery_item(item) for item in items]
+    """Convert list of BodyBatteryData to compact analysis-ready dicts.
+
+    Keeps only SLEEP and ACTIVITY events (most useful for analysis).
+    Removes timeline from SLEEP events (summary is sufficient).
+    """
+    results = []
+    for item in items:
+        slimmed = slim_body_battery_item(item)
+        event_type = slimmed.get('event', {}).get('type')
+        # Keep only sleep and activity events
+        if event_type not in ('SLEEP', 'ACTIVITY', None):
+            continue
+        # Remove verbose timeline from sleep events (summary covers it)
+        if event_type == 'SLEEP':
+            slimmed.pop('timeline_stress_30m', None)
+        results.append(slimmed)
+    return results

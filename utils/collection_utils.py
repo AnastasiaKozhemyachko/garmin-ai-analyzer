@@ -76,10 +76,21 @@ def collect_data(data_types, output_file, results_dir, days_to_collect):
     print(f"\n✅ Data saved to {output_file}")
 
 
+# Data types that return only 1 entry from .list() regardless of days parameter.
+# These always need day-by-day collection to get historical data.
+DAY_BY_DAY_TYPES = {'daily_training_status'}
+
+
 def _fetch_and_slim(name, class_name, days, today):
     """Fetch data from Garmin and run through slimmer. Returns slimmed data or None."""
     from datetime import timedelta
     
+    # Some types always need day-by-day fetching
+    if name in DAY_BY_DAY_TYPES:
+        collected = _fetch_day_by_day(name, class_name, days, today)
+        if collected:
+            return collected
+
     # Try primary fetch
     try:
         data_class = getattr(garth, class_name)
@@ -87,7 +98,14 @@ def _fetch_and_slim(name, class_name, days, today):
             raw = data_class.list(limit=days)
         else:
             raw = data_class.list(today, days)
-        return _slim_data(name, raw)
+
+        # If we got much fewer results than expected, try day-by-day
+        if raw and isinstance(raw, list) and len(raw) < max(2, days // 3):
+            day_by_day = _fetch_day_by_day(name, class_name, days, today)
+            if day_by_day and isinstance(day_by_day, list) and len(day_by_day) > len(raw):
+                return day_by_day
+
+        return _slim_data(name, raw, days=days)
     except Exception as e:
         error_str = str(e)
     
@@ -142,18 +160,22 @@ def _fetch_day_by_day(name, class_name, days, today):
             pass  # Skip days with validation errors
     
     if collected_raw:
-        return _slim_data(name, collected_raw)
+        return _slim_data(name, collected_raw, days=days)
     return None
 
 
-def _slim_data(name, raw):
+def _slim_data(name, raw, days=None):
     """Run raw data through the appropriate slimmer."""
     if not raw or (isinstance(raw, list) and len(raw) == 0):
         return None
     
     slimmer = SLIMMER_REGISTRY.get(name)
     if slimmer:
-        data = slimmer(raw)
+        # For sleep data with many days, strip verbose timeline to save tokens
+        if name == 'daily_sleep_data' and days and days > 5:
+            data = slimmer(raw, include_timeline=False)
+        else:
+            data = slimmer(raw)
     else:
         # Generic conversion
         if hasattr(raw, '__iter__') and not isinstance(raw, (str, dict)):

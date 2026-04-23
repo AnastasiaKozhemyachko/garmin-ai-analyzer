@@ -238,16 +238,21 @@ def slim_daily_sleep_data(item: Any) -> Dict:
     return result
 
 
-def slim_daily_sleep_data_list(items: List[Any]) -> List[Dict]:
+def slim_daily_sleep_data_list(items: List[Any], include_timeline: bool = True) -> List[Dict]:
     """
     Convert list of DailySleepData to compact dicts with aggregated summaries.
     
     Args:
         items: List of DailySleepData instances or dicts
-        
+        include_timeline: If False, strips levels_timeline to save tokens (for multi-day reports)
+
     Returns:
         List of compact dicts with core fields and aggregated summaries
     """
-    return [slim_daily_sleep_data(item) for item in items]
+    results = [slim_daily_sleep_data(item) for item in items]
+    if not include_timeline:
+        for r in results:
+            r.pop('levels_timeline', None)
+    return results
 
 

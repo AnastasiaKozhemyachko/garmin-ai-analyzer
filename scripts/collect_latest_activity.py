@@ -53,7 +53,7 @@ def main():
         
         print(f"✅ Latest activity saved to {output_file}")
         print(f"   Activity: {latest_activity.get('activity_name', 'N/A')}")
-        print(f"   Type: {latest_activity.get('type_name', 'N/A')}")
+        print(f"   Type: {latest_activity.get('type_key', 'N/A')}")
         print(f"   Date: {latest_activity.get('start_time_local', 'N/A')}")
         
     except KeyboardInterrupt:
